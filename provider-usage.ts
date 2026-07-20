@@ -116,12 +116,31 @@ async function fetchJSON(url: string, headers: Record<string, string>): Promise<
 	}
 }
 
+class MissingCredentialsError extends Error {
+	constructor(provider: 'codex' | 'grok') {
+		super(`credentials unavailable; run \`${provider} login\``)
+		this.name = 'MissingCredentialsError'
+	}
+}
+
+async function authFilePath(provider: 'codex' | 'grok'): Promise<string> {
+	if (provider === 'codex') {
+		const home = process.env.CODEX_HOME || join(homedir(), '.codex')
+		return join(home, 'auth.json')
+	}
+	const home = process.env.GROK_HOME || join(homedir(), '.grok')
+	return join(home, 'auth.json')
+}
+
 async function readAuthFile(path: string, provider: 'codex' | 'grok'): Promise<Record<string, unknown>> {
 	try {
 		const info = await stat(path)
-		if (!info.isFile() || info.size > MAX_AUTH_BYTES) throw new Error('invalid credential file')
+		if (!info.isFile() || info.size === 0 || info.size > MAX_AUTH_BYTES) throw new Error('invalid credential file')
 		return asRecord(JSON.parse(await readFile(path, 'utf8'))) ?? {}
-	} catch {
+	} catch (error) {
+		if (error && typeof error === 'object' && 'code' in error && error.code === 'ENOENT') {
+			throw new MissingCredentialsError(provider)
+		}
 		throw new Error(`credentials unavailable; run \`${provider} login\``)
 	}
 }
@@ -179,8 +198,7 @@ function windowLabel(value: unknown, fallback: string): string {
 }
 
 async function codexUsage(): Promise<string> {
-	const home = process.env.CODEX_HOME || join(homedir(), '.codex')
-	const auth = await readAuthFile(join(home, 'auth.json'), 'codex')
+	const auth = await readAuthFile(await authFilePath('codex'), 'codex')
 	const tokens = asRecord(auth?.tokens)
 	const token = tokens?.access_token ?? tokens?.accessToken
 	const accountID = tokens?.account_id ?? tokens?.accountId
@@ -358,8 +376,7 @@ function parseGrokBilling(body: Uint8Array): { used: number; reset?: number } {
 }
 
 async function grokUsage(): Promise<string> {
-	const home = process.env.GROK_HOME || join(homedir(), '.grok')
-	const auth = await readAuthFile(join(home, 'auth.json'), 'grok')
+	const auth = await readAuthFile(await authFilePath('grok'), 'grok')
 	const entries = Object.entries(auth ?? {})
 	const record = asRecord(entries.find(([scope]) => scope.startsWith('https://auth.x.ai::'))?.[1] ?? entries[0]?.[1])
 	const token = record?.key
@@ -449,11 +466,14 @@ export async function gatherProviderUsage(providers: Provider[] = ALL_PROVIDERS)
 			try {
 				return await fetchers[provider]()
 			} catch (error) {
+				if (error instanceof MissingCredentialsError) return undefined
 				return `${provider[0].toUpperCase()}${provider.slice(1)}\n  unavailable: ${errorMessage(error)}`
 			}
 		}),
 	)
-	const output = results.join('\n\n')
+	const lines = results.filter((line): line is string => Boolean(line))
+	if (!lines.length) return 'No configured providers available.'
+	const output = lines.join('\n\n')
 	return output.length <= MAX_OUTPUT_CHARS
 		? output
 		: `${output.slice(0, MAX_OUTPUT_CHARS)}\n\nOutput truncated.`

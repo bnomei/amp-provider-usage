@@ -73,8 +73,9 @@ optional `providers` array:
 ```
 
 Use any combination of `amp`, `codex`, and `grok`, or omit `providers` to query
-all three. If a selected provider is unavailable, the result explains why while
-still returning the other selected providers.
+all three. Providers without a local credential file are omitted. If a
+configured provider fails temporarily, the result explains why while still
+returning the other selected providers.
 
 ## Security and privacy
 
