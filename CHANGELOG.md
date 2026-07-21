@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Documentation
+- Document that the `amp plugins` installation flow is not supported yet and provide Amp-assisted
+  and install-script workarounds for the TypeScript plugin.
+
+### Added
+- Add a POSIX shell installer for installing or updating the plugin from GitHub.
+
 ## [0.1.1] - 2026-07-20
 
 ### Changed

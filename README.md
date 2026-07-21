@@ -46,20 +46,48 @@ Values above are illustrative only.
 ## Install
 
 The plugin ships as a single TypeScript file and is not published to npm.
+Amp's `amp plugins` command does not support this installation flow yet.
+
+<details>
+<summary>When Amp supports installing external plugins</summary>
+
+Install with automatic updates:
 
 ```sh
 amp plugins add https://raw.githubusercontent.com/bnomei/amp-provider-usage/main/provider-usage.ts --auto-update
+```
+
+Update or remove the plugin:
+
+```sh
+amp plugins update provider-usage.ts
+amp plugins remove provider-usage.ts
+```
+
+</details>
+
+The easiest workaround is to ask Amp to install the TypeScript file directly:
+
+```text
+Install the Amp plugin from https://raw.githubusercontent.com/bnomei/amp-provider-usage/main/provider-usage.ts as a global plugin.
+```
+
+Amp will copy it to `~/.config/amp/plugins/provider-usage.ts`. Alternatively,
+run the install script:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/bnomei/amp-provider-usage/main/scripts/install.sh | sh
 ```
 
 After installation, use **Refresh provider usage** from the Amp command palette,
 or call the `provider_usage` tool. The command displays results in a modal;
 tool results are returned to the Amp thread and model context.
 
-To update or remove the plugin:
+Until `amp plugins` supports this flow, update the plugin by asking Amp to
+install it again or by rerunning the install script. To remove it:
 
 ```sh
-amp plugins update provider-usage.ts
-amp plugins remove provider-usage.ts
+rm ~/.config/amp/plugins/provider-usage.ts
 ```
 
 ## Use the plugin
